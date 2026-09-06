@@ -1,0 +1,29 @@
+{
+  "name": "mindvault-ai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"nodemon server/index.js\"",
+    "start": "node server/index.js",
+    "build": "vite build",
+    "test": "node --test server/**/*.test.js",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "express": "^4.21.2",
+    "firebase": "^11.3.1",
+    "firebase-admin": "^13.0.2",
+    "helmet": "^8.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "nodemon": "^3.1.9",
+    "vite": "^6.0.7"
+  }
+}
