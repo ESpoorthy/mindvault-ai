@@ -110,6 +110,9 @@ gcloud run deploy mindvault-ai \
 
 Cloud Run prints the HTTPS URL when deployment succeeds. Set `GEMINI_MODEL` to a model available to the deployed API key if `gemini-2.0-flash` is unavailable.
 
+### Deployed URL
+https://mindvault-ai-jf98.onrender.com
+
 ## Environment variables
 
 | Variable | Where used | Secret? |
