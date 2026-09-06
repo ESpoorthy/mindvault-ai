@@ -105,8 +105,7 @@ gcloud run deploy mindvault-ai \
   --source . \
   --region asia-south1 \
   --set-secrets GEMINI_API_KEY=mindvault-gemini-key:latest \
-  --set-env-vars GEMINI_MODEL=gemini-2.0-flash \
-  --set-build-env-vars VITE_FIREBASE_API_KEY=...,VITE_FIREBASE_AUTH_DOMAIN=...,VITE_FIREBASE_PROJECT_ID=...,VITE_FIREBASE_STORAGE_BUCKET=...,VITE_FIREBASE_MESSAGING_SENDER_ID=...,VITE_FIREBASE_APP_ID=...
+  --set-env-vars GEMINI_MODEL=gemini-2.0-flash,FIREBASE_API_KEY=...,FIREBASE_AUTH_DOMAIN=...,FIREBASE_PROJECT_ID=...,FIREBASE_STORAGE_BUCKET=...,FIREBASE_MESSAGING_SENDER_ID=...,FIREBASE_APP_ID=...
 ```
 
 Cloud Run prints the HTTPS URL when deployment succeeds. Set `GEMINI_MODEL` to a model available to the deployed API key if `gemini-2.0-flash` is unavailable.
@@ -115,7 +114,8 @@ Cloud Run prints the HTTPS URL when deployment succeeds. Set `GEMINI_MODEL` to a
 
 | Variable | Where used | Secret? |
 | --- | --- | --- |
-| `VITE_FIREBASE_*` | Browser build | No — Firebase web configuration |
+| `VITE_FIREBASE_*` | Local browser build | No — Firebase web configuration |
+| `FIREBASE_*` | Docker/Render runtime | No — served as public Firebase web configuration |
 | `GEMINI_API_KEY` | Cloud Run server only | Yes — Secret Manager |
 | `GEMINI_MODEL` | Cloud Run server | No |
 | `PORT` | Cloud Run server | No |

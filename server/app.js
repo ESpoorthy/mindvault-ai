@@ -25,11 +25,12 @@ const analysisSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(40)).max(10), keywords: z.array(z.string().trim().min(1).max(60)).max(15)
 });
 
-export function createApp({ auth, store, gemini, clock = () => new Date().toISOString() }) {
+export function createApp({ auth, store, gemini, clientConfig = {}, clock = () => new Date().toISOString() }) {
   const app = express();
   const hits = new Map();
   app.disable('x-powered-by'); app.use(helmet({ contentSecurityPolicy: false })); app.use(express.json({ limit: '180kb' }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+  app.get('/api/config', (_req, res) => res.json(clientConfig));
   app.use('/api', async (req, res, next) => {
     const header = req.get('authorization');
     if (!header?.startsWith('Bearer ')) return safeError(res, 401, 'UNAUTHORIZED', 'Authentication is required.');
