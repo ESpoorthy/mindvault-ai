@@ -20,7 +20,7 @@ The Vite client authenticates with Firebase Authentication and sends an ID token
 1. Enable Cloud Run, Artifact Registry, Firebase/Firestore, and Secret Manager APIs. Deploy the rules with `firebase deploy --only firestore:rules`.
 2. Store the Gemini key: `printf %s "$GEMINI_API_KEY" | gcloud secrets create mindvault-gemini-key --data-file=-`.
 3. Give the Cloud Run runtime service account `roles/secretmanager.secretAccessor` and Firestore access appropriate to its project (normally `roles/datastore.user`). Do not use owner/editor roles.
-4. Build/deploy: `gcloud run deploy mindvault-ai --source . --region REGION --set-secrets GEMINI_API_KEY=mindvault-gemini-key:latest --set-env-vars GEMINI_MODEL=gemini-2.0-flash`.
+4. Build/deploy: `gcloud run deploy mindvault-ai --source . --region REGION --set-secrets GEMINI_API_KEY=mindvault-gemini-key:latest --set-env-vars GEMINI_MODEL=gemini-2.0-flash --set-build-env-vars VITE_FIREBASE_API_KEY=...,VITE_FIREBASE_AUTH_DOMAIN=...,VITE_FIREBASE_PROJECT_ID=...,VITE_FIREBASE_STORAGE_BUCKET=...,VITE_FIREBASE_MESSAGING_SENDER_ID=...,VITE_FIREBASE_APP_ID=...`.
 5. Add the Cloud Run URL to the Firebase authorized domains if needed. Cloud Run supplies HTTPS and injects the secret as the server-only environment variable.
 
 The model can be changed through `GEMINI_MODEL` without altering source. Ensure the selected model is available to the API key/project in use.
