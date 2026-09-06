@@ -1,30 +1,125 @@
 # MindVault AI
 
-MindVault is a privacy-first Gemini journal: Google-authenticated users can chat in Reflect, Brainstorm, Plan, and Free Chat modes; save structured reflections; browse their timeline; search their own data; export it; and permanently delete it.
+> **Your thoughts. Your AI. Your private space.**
 
-## Architecture and security
+MindVault AI is a privacy-first personal journal powered by Gemini. Authenticated users can turn multi-turn conversations into private reflections, insights, actions, goals, and a personal timeline.
 
-The Vite client authenticates with Firebase Authentication and sends an ID token to the Express API. The API verifies it with Firebase Admin before every private operation and derives the UID solely from that verified token. Journal documents live beneath `users/{uid}/journals/{journalId}`. Gemini is called only by the server; the browser never receives its key. The server caps payloads, message count/length, output size, and per-user requests (20/minute, intentionally documented as in-memory prototype protection). It avoids logging journal contents or credentials.
+## Highlights
 
-`firestore.rules` provides direct-client defense in depth. The API additionally enforces ownership through the UID-scoped Firestore path. Requests for another user's known document ID resolve as not found rather than revealing it exists.
+- Google sign-in with Firebase Authentication
+- Reflect, Brainstorm, Plan, and Free Chat modes
+- Server-side multi-turn Gemini conversations
+- Structured summaries, insights, actions, goals, mood, tags, and keywords
+- Private journal search, dashboard metrics, goals, and timeline
+- Data export and permanent journal deletion
+- Responsive, accessible interface for an Ideathon demonstration
 
-## Local setup
+## Architecture
 
-1. Create a Firebase project, enable Google Authentication, create Firestore, and add a web app.
-2. Copy `.env.example` to `.env` and populate the `VITE_FIREBASE_*` values. Set `GEMINI_API_KEY` only locally; never commit it.
-3. Authenticate Application Default Credentials for server-side Firebase Admin locally (`gcloud auth application-default login`), then run `npm install`, `npm run dev`.
-4. Run `npm test`, `npm run lint`, and `npm run build` before deploying.
+```text
+Browser (Vite + Firebase Auth)
+          │ Firebase ID token
+          ▼
+Cloud Run (Express API)
+   ├── Firebase Admin verifies identity
+   ├── Firestore: users/{uid}/journals/{journalId}
+   └── Gemini API key from Secret Manager
+```
+
+The Gemini key never reaches the browser. The API uses only the verified Firebase UID as the user identity; it never trusts an ID supplied by the client.
+
+## Security model
+
+- Every private endpoint verifies a Firebase ID token.
+- Journal reads, writes, exports, and deletes are scoped to the verified UID.
+- `firestore.rules` enforces `request.auth.uid == userId` as defense in depth.
+- Gemini runs only on the server with Secret Manager-injected credentials.
+- Message count, message length, payload size, and model output are capped.
+- Prototype protection includes a per-user limit of 20 requests/minute; use a distributed limiter for multi-instance production scale.
+- Application instructions are kept separate from untrusted journal text, and secrets never appear in prompts or logs.
+
+## Project structure
+
+```text
+src/               Frontend application and styles
+server/            Express API, auth boundary, and API tests
+firestore.rules    Firestore authorization rules
+Dockerfile         Cloud Run production container build
+.env.example       Local configuration template (no secret values)
+```
+
+## Run locally
+
+### Prerequisites
+
+- Node.js 22+
+- Firebase project with Google Authentication and Firestore enabled
+- Firebase web-app configuration
+- Gemini API key for local server use
+- Application Default Credentials: `gcloud auth application-default login`
+
+### Setup and verification
+
+```bash
+cp .env.example .env
+npm install
+npm run dev
+
+npm test
+npm run lint
+npm run build
+```
+
+Populate the Firebase values and `GEMINI_API_KEY` in `.env`. Firebase web configuration is public by design; the Gemini key must never be committed.
+
+The test suite covers missing/invalid tokens, malformed Gemini requests and analysis, current-user export/deletion isolation, and a User A/User B cross-user journal denial.
 
 ## Deploy to Cloud Run
 
-1. Enable Cloud Run, Artifact Registry, Firebase/Firestore, and Secret Manager APIs. Deploy the rules with `firebase deploy --only firestore:rules`.
-2. Store the Gemini key: `printf %s "$GEMINI_API_KEY" | gcloud secrets create mindvault-gemini-key --data-file=-`.
-3. Give the Cloud Run runtime service account `roles/secretmanager.secretAccessor` and Firestore access appropriate to its project (normally `roles/datastore.user`). Do not use owner/editor roles.
-4. Build/deploy: `gcloud run deploy mindvault-ai --source . --region REGION --set-secrets GEMINI_API_KEY=mindvault-gemini-key:latest --set-env-vars GEMINI_MODEL=gemini-2.0-flash --set-build-env-vars VITE_FIREBASE_API_KEY=...,VITE_FIREBASE_AUTH_DOMAIN=...,VITE_FIREBASE_PROJECT_ID=...,VITE_FIREBASE_STORAGE_BUCKET=...,VITE_FIREBASE_MESSAGING_SENDER_ID=...,VITE_FIREBASE_APP_ID=...`.
-5. Add the Cloud Run URL to the Firebase authorized domains if needed. Cloud Run supplies HTTPS and injects the secret as the server-only environment variable.
+### Prerequisites
 
-The model can be changed through `GEMINI_MODEL` without altering source. Ensure the selected model is available to the API key/project in use.
+1. Attach an active **billing account** to the Google Cloud project. Cloud Run, Cloud Build, Artifact Registry, and Secret Manager cannot be enabled without billing.
+2. Enable Google sign-in and add the final Cloud Run host to Firebase Authentication’s authorized domains.
+3. Create Firestore and deploy the included rules:
 
-## Test coverage
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
 
-The API suite verifies missing/invalid token rejection, malformed chat rejection, authenticated journal creation, a concrete User A/User B cross-user read/delete denial, export isolation, and scoped bulk deletion. Gemini analysis uses a strict Zod schema; malformed model output returns an error before any Firestore write.
+### Store the Gemini key
+
+```bash
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
+printf %s "$GEMINI_API_KEY" | gcloud secrets create mindvault-gemini-key --data-file=- --replication-policy=automatic
+```
+
+Grant the Cloud Run runtime service account only:
+
+- `roles/secretmanager.secretAccessor`
+- `roles/datastore.user`
+
+### Deploy
+
+```bash
+gcloud run deploy mindvault-ai \
+  --source . \
+  --region asia-south1 \
+  --set-secrets GEMINI_API_KEY=mindvault-gemini-key:latest \
+  --set-env-vars GEMINI_MODEL=gemini-2.0-flash \
+  --set-build-env-vars VITE_FIREBASE_API_KEY=...,VITE_FIREBASE_AUTH_DOMAIN=...,VITE_FIREBASE_PROJECT_ID=...,VITE_FIREBASE_STORAGE_BUCKET=...,VITE_FIREBASE_MESSAGING_SENDER_ID=...,VITE_FIREBASE_APP_ID=...
+```
+
+Cloud Run prints the HTTPS URL when deployment succeeds. Set `GEMINI_MODEL` to a model available to the deployed API key if `gemini-2.0-flash` is unavailable.
+
+## Environment variables
+
+| Variable | Where used | Secret? |
+| --- | --- | --- |
+| `VITE_FIREBASE_*` | Browser build | No — Firebase web configuration |
+| `GEMINI_API_KEY` | Cloud Run server only | Yes — Secret Manager |
+| `GEMINI_MODEL` | Cloud Run server | No |
+| `PORT` | Cloud Run server | No |
+
+## License
+
+See [LICENSE](LICENSE).
